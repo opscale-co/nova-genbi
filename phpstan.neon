@@ -1,0 +1,33 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/opscale-co/strict-rules/rules.clean.neon
+    - vendor/opscale-co/strict-rules/rules.ddd.neon
+    - vendor/opscale-co/strict-rules/rules.smells.neon
+    - vendor/opscale-co/strict-rules/rules.solid.neon
+
+parameters:
+    level: 9
+    phpVersion: 80300
+    paths:
+        - src
+        - tests
+        - workbench/app
+    excludePaths:
+        - tests/fixtures/*
+    ignoreErrors:
+        # Service providers follow Laravel patterns that conflict with strict SOLID rules
+        -
+            message: '#.*#'
+            path: '*ServiceProvider.php'
+
+        # Tests use PHPUnit-style methods that the OCP rule flags
+        -
+            identifier: solid.ocp.conditionalOverride
+            path: tests/*
+
+        # Nova resources use __() for translations — standard Nova pattern
+        -
+            identifier: smells.helpersRestriction.helper
+            message: '#Helper function "__\(\)" usage detected#'
+            paths:
+                - src/Nova/*

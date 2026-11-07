@@ -1,0 +1,38 @@
+laravel: '@testbench'
+
+env:
+  - APP_NAME=Opscale
+  - APP_LOCALE=en
+  - APP_FALLBACK_LOCALE=en
+  - NOVA_LICENSE_KEY=HsCTTooPO11aHvvLtaFw1rGnfOm5VsAA5IS9YqKSXSVjhFeo8M
+  - GEMINI_API_KEY=AIzaSyAHSuCGuAjUCoX3_sNti8YPbeA5NGaGKt4
+  - NOVA_GENBI_AI_PROVIDER=gemini
+  - NOVA_GENBI_AI_MODEL=gemini-2.5-flash
+
+providers:
+  - Laravel\Nova\NovaCoreServiceProvider
+  - Laravel\Nova\NovaServiceProvider
+  - Workbench\App\Providers\WorkbenchServiceProvider
+  - Workbench\App\Providers\NovaServiceProvider
+  - Opscale\NovaGenbi\PackageServiceProvider
+
+workbench:
+  start: /nova
+  build:
+    - package:discover
+    - asset-publish
+    - create-sqlite-db
+    - storage:link:
+        --force: true
+    - db:wipe
+    - migrate:refresh
+    - db:seed:
+        --class: 'Workbench\Database\Seeders\DatabaseSeeder'
+  assets:
+    - nova-assets
+  sync: []
+
+purge:
+  directories:
+    - lang/*
+    - public/vendor/*

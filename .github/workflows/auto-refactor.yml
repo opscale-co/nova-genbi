@@ -1,0 +1,150 @@
+name: Auto Refactor
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  auto-refactor:
+    runs-on: ubuntu-latest
+    name: 🔧 Automated Refactoring with Rector
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: 🐘 Setup PHP 8.3
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, pdo_mysql, pdo_pgsql, tokenizer, xml, zip
+        coverage: none
+
+    - name: 📦 Get Composer Cache Directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: 🗂️ Cache Composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: 🔧 Install PHP dependencies
+      run: |
+        composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+      env:
+        COMPOSER_AUTH: '{"http-basic": {"nova.laravel.com": {"username": "${{ secrets.NOVA_USERNAME }}", "password": "${{ secrets.NOVA_LICENSE_KEY }}"}}}'
+
+    - name: 🗂️ Cache Rector cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/rector
+        key: ${{ runner.os }}-rector-${{ hashFiles('**/rector.php') }}
+        restore-keys: |
+          ${{ runner.os }}-rector-
+
+    - name: 🔍 Run Rector - Dry Run
+      id: rector-check
+      run: |
+        echo "🔍 Checking for potential refactoring opportunities..."
+        if vendor/bin/rector process --dry-run --ansi; then
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "✅ No refactoring needed - code is already optimized!"
+        else
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "🔧 Refactoring opportunities found"
+        fi
+      env:
+        RECTOR_CACHE_DIR: /tmp/rector
+
+    - name: 🛠️ Apply Rector changes
+      if: steps.rector-check.outputs.has_changes == 'true'
+      run: |
+        echo "🛠️ Applying Rector refactoring..."
+        vendor/bin/rector process --ansi
+      env:
+        RECTOR_CACHE_DIR: /tmp/rector
+
+    - name: 📊 Check for changes
+      if: steps.rector-check.outputs.has_changes == 'true'
+      id: verify-changes
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "🎯 Rector made improvements to your code!"
+          git status --short
+          echo "changes_made=true" >> $GITHUB_OUTPUT
+        else
+          echo "📝 No changes were made"
+          echo "changes_made=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: 💡 Comment on PR with suggestions
+      if: steps.verify-changes.outputs.changes_made == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { execSync } = require('child_process');
+          
+          // Get the diff
+          const diff = execSync('git diff', { encoding: 'utf8' });
+          
+          const comment = `## 🔧 Rector Auto-Refactoring Suggestions
+          
+          Rector has identified some improvements that can be made to your code! Here's what it found:
+          
+          ### 📊 Changes Summary
+          \`\`\`bash
+          ${execSync('git status --short', { encoding: 'utf8' })}
+          \`\`\`
+          
+          ### 🔍 Code Improvements
+          <details>
+          <summary>Click to see detailed changes</summary>
+          
+          \`\`\`diff
+          ${diff.length > 60000 ? diff.substring(0, 60000) + '\n\n... (diff truncated)' : diff}
+          \`\`\`
+          </details>
+          
+          ### 🚀 How to apply these changes
+          
+          1. **Locally:**
+             \`\`\`bash
+             vendor/bin/rector process
+             \`\`\`
+          
+          2. **Review the changes** and commit them if they look good
+          
+          3. **Push** to update this PR
+          
+          > 💡 **Tip:** These suggestions help improve code quality, performance, and maintainability!
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+    - name: ❌ Fail if changes needed
+      if: steps.rector-check.outputs.has_changes == 'true'
+      run: |
+        echo "❌ This PR needs refactoring before it can be merged."
+        echo "   Please run 'vendor/bin/rector process' locally and commit the changes."
+        echo ""
+        echo "💡 See the PR comment above for detailed suggestions."
+        exit 1
+
+    - name: ✅ All good!
+      if: steps.rector-check.outputs.has_changes == 'false'
+      run: |
+        echo "✅ Code quality check passed!"
+        echo "🎉 No refactoring needed - your code is already optimized!"

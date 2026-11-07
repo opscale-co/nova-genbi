@@ -1,0 +1,10 @@
+/vendor
+/node_modules
+/graphify-out
+/.claude
+.phpunit.cache
+.phpunit.result.cache
+.DS_Store
+/workbench/database/*.sqlite
+/.idea
+/.vscode

@@ -1,0 +1,104 @@
+{
+  "name": "opscale-co/nova-genbi",
+  "description": "Generative BI for Laravel Nova: chat with an AI that reads your database schema, writes read-only SQL, and builds native Nova dashboards and streamed exportable reports",
+  "version": "1.0.0",
+  "keywords": [
+    "laravel",
+    "nova",
+    "package",
+    "tool",
+    "opscale",
+    "bi",
+    "analytics",
+    "reports",
+    "ai",
+    "sql"
+  ],
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://nova.laravel.com"
+    }
+  ],
+  "homepage": "https://github.com/opscale-co/nova-genbi",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Opscale",
+      "email": "development@opscale.co",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": "^8.3",
+    "laravel/ai": "^0.9.0",
+    "butschster/dbml-parser": "^0.3",
+    "openspout/openspout": "^4.24",
+    "opscale-co/actions": "^5.0",
+    "opscale-co/nova-package-tools": "^2.0",
+    "opscale-co/validations": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Opscale\\NovaGenbi\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Opscale\\NovaGenbi\\Tests\\": "tests",
+      "Workbench\\App\\": "workbench/app/",
+      "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+      "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Opscale\\NovaGenbi\\PackageServiceProvider"
+      ]
+    },
+    "opscale": {
+      "protocol-pinning": "laravel/ai ^0.9 streams the Vercel AI SDK UI Message Stream v1 (x-vercel-ai-ui-message-stream: v1). The npm side pins @ai-sdk/vue 4.0.x / ai 7.0.x, which consume that same protocol version. Bump both sides together."
+    }
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require-dev": {
+    "driftingly/rector-laravel": "^2.0",
+    "larastan/larastan": "^3.9",
+    "laravel/nova": "^5.10",
+    "laravel/nova-devtool": "^1.0",
+    "mockery/mockery": "^1.6",
+    "opscale-co/strict-rules": "^1.3",
+    "orchestra/testbench-dusk": "^11.0",
+    "pestphp/pest": "^4.0",
+    "pestphp/pest-plugin-laravel": "^4.0",
+    "phpunit/phpunit": "^12.0",
+    "rector/rector": "^2.0",
+    "tightenco/duster": "^3.0"
+  },
+  "scripts": {
+    "post-autoload-dump": [
+      "@clear",
+      "@prepare"
+    ],
+    "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+    "prepare": "@php vendor/bin/testbench package:discover --ansi",
+    "build": [
+      "npm run production",
+      "@php vendor/bin/testbench workbench:build --ansi"
+    ],
+    "serve": [
+      "Composer\\Config::disableProcessTimeout",
+      "@build",
+      "@php vendor/bin/testbench serve --ansi"
+    ],
+    "test": "@php vendor/bin/pest"
+  }
+}
